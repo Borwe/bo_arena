@@ -6,16 +6,22 @@ project(
   default_options : ['warning_level=3'],
 )
 
-dependencies = [
-]
+cc = meson.get_compiler('c')
+ubsan = cc.find_library('ubsan', required: true)
 
-c_args = ['-std=c11']
+
+dependencies = [ ubsan ]
+
+c_args = ['-std=c11', '-Wall', '-Wextra']
+test_args = ['-fsanitize=undefined']
+
+
 
 exe = executable(
   'dehash',
   'dehash.c',
   dependencies : dependencies,
-  c_args: c_args,
+  c_args: c_args + test_args,
   install : true,
 )
 
