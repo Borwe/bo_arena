@@ -8,31 +8,36 @@
 #include <stdalign.h>
 #include <stdbool.h>
 
-typedef struct Arena Arena; 
+typedef struct bo_arena bo_arena; 
 
-typedef void (*arenaCleanup)(Arena *);
+typedef void (*bo_arena_cleanup_func)(bo_arena *);
 
-typedef struct ArenaAlocation {
-    struct ArenaAlocation *back;
+typedef struct bo_arena_alocation {
+    struct bo_arena_alocation *back;
     uint64_t size;
     void *location;
-    struct ArenaAlocation *next;
-}ArenaAlocation;
+    struct bo_arena_alocation  *next;
+}bo_arena_alocation;
 
-typedef struct Arena {
+typedef struct bo_arena {
     void *memory;
     void *ptr;
     uint64_t size;
     bool freeing;
-    arenaCleanup cleanup;
-    ArenaAlocation *head;
-}Arena;
+    bo_arena_cleanup_func cleanup;
+    bo_arena_alocation *head;
+}bo_arena;
 
-Arena makeArena(void *memory, uint64_t size, bool isFreeingKind, arenaCleanup cleanupFunc){
+/*
+*/
+bo_arena bo_make_arena(
+    void *memory, uint64_t size,
+    bool isFreeingKind, bo_arena_cleanup_func cleanupFunc){
+
     if(memory==NULL){
         panic("Passed in memory that is null");
     }
-    return (Arena){
+    return (bo_arena){
         .memory = memory,
         .ptr = memory,
         .freeing = isFreeingKind,
@@ -41,7 +46,7 @@ Arena makeArena(void *memory, uint64_t size, bool isFreeingKind, arenaCleanup cl
     };
 }
 
-void *allocate(Arena *area, uint64_t alignment, uint64_t size, uint64_t count){
+void *allocate(bo_arena *area, uint64_t alignment, uint64_t size, uint64_t count){
     uintptr_t ptr = (uintptr_t)area->ptr;
     const uintptr_t ptr_end = ptr+(size*count);
     if((ptr & (alignment-1)) == 0 &&
@@ -60,10 +65,10 @@ void *allocate(Arena *area, uint64_t alignment, uint64_t size, uint64_t count){
     return (void*)ptr;
 }
 
-void arenaFree(Arena *arena, void *item){
+void bo_arena_free(bo_arena *arena, void *item){
 }
 
-#define allocate_items(ptr, panicc, arena, typ, count) {\
+#define bo_allocate_items(ptr, panicc, arena, typ, count) {\
     const size_t alignment = alignof(typ); \
     typ *ptr_n = allocate((arena), alignment, sizeof(typ), (count));\
     if((panicc) && ptr_n==NULL){\

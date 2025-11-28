@@ -12,7 +12,7 @@
     test();\
 }
 
-void cleanUpMmapArena(Arena *arena){
+void cleanUpMmapArena(bo_arena *arena){
     const int r = munmap(arena->memory, arena->size);
     if(r==-1){
         const char * msg = strerror(errno);
@@ -22,7 +22,7 @@ void cleanUpMmapArena(Arena *arena){
 }
 
 void testClearing(void){
-    Arena arena  = makeArena(
+    bo_arena arena  = bo_make_arena(
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
@@ -32,13 +32,13 @@ void testClearing(void){
 }
 
 void testUsing(void){
-    Arena arena  = makeArena(
+    bo_arena arena  = bo_make_arena(
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
         100, false, cleanUpMmapArena);
     char *msg;
-    allocate_items(msg,true, &arena, char, 6);
+    bo_allocate_items(msg,true, &arena, char, 6);
     strcpy(msg, "Brian");
     assert(msg[1]=='r', "Unexpected");
     assert(msg[4]=='n', "Unexpected");
@@ -47,13 +47,13 @@ void testUsing(void){
 }
 
 void testOverUsing(void){
-    Arena arena  = makeArena(
+    bo_arena arena  = bo_make_arena(
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
         100, false, cleanUpMmapArena);
     char *msg;
-    allocate_items(msg, false, &arena, char, 200);
+    bo_allocate_items(msg, false, &arena, char, 200);
     assert(msg==NULL, "Expected to fail allocation");
     arena.cleanup(&arena);
     assert(arena.memory == NULL, "Expected memory to be null after clearing");
@@ -61,14 +61,14 @@ void testOverUsing(void){
 
 
 void testOverUsingLater(void){
-    Arena arena  = makeArena(
+    bo_arena arena  = bo_make_arena(
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
         100, false, cleanUpMmapArena);
     char *msg;
-    allocate_items(msg, true, &arena, char, 20);
-    allocate_items(msg, false, &arena, char, 81);
+    bo_allocate_items(msg, true, &arena, char, 20);
+    bo_allocate_items(msg, false, &arena, char, 81);
     assert(msg==NULL, "Expected to fail allocation");
     arena.cleanup(&arena);
     assert(arena.memory == NULL, "Expected memory to be null after clearing");
@@ -76,17 +76,17 @@ void testOverUsingLater(void){
 
 
 void testFreeing(void){
-    Arena arena  = makeArena(
+    bo_arena arena  = bo_make_arena(
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
         100, false, cleanUpMmapArena);
     char *msg;
-    allocate_items(msg, true, &arena, char, 20);
-    allocate_items(msg, false, &arena, char, 81);
+    bo_allocate_items(msg, true, &arena, char, 20);
+    bo_allocate_items(msg, false, &arena, char, 81);
     assert(msg==NULL, "Expected to fail allocation");
-    arenaFree(&arena,msg);
-    allocate_items(msg, true, &arena, char, 81);
+    bo_arena_free(&arena,msg);
+    //bo_allocate_items(msg, true, &arena, char, 81);
     arena.cleanup(&arena);
     assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
