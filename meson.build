@@ -15,14 +15,20 @@ dependencies = [ ubsan ]
 c_args = ['-std=c11', '-Wall', '-Wextra']
 test_args = ['-fsanitize=undefined']
 
-
-
 exe = executable(
   'dehash',
   'dehash.c',
+  dependencies : dependencies,
+  c_args: c_args,
+  install : true,
+)
+
+arena_test = executable(
+  'arena_test',
+  'arena_test.c',
   dependencies : dependencies,
   c_args: c_args + test_args,
   install : true,
 )
 
-test('basic', exe)
+test('arena_test', arena_test)
