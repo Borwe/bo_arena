@@ -29,6 +29,10 @@ typedef struct bo_arena {
 }bo_arena;
 
 /*
+ * Get an bo_arena, if you want the arena to be able
+ * to reuse memory by cleaning using `bo_arena_free()`
+ * then make sure you set @isFreeingKind to true,
+ * else set it to false for noncleaning bo_arena
 */
 bo_arena bo_make_arena(
     void *memory, uint64_t size,

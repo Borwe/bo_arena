@@ -15,10 +15,15 @@ dependencies = [ ubsan ]
 c_args = ['-std=c11', '-Wall', '-Wextra']
 test_args = ['-fsanitize=undefined']
 
+bo_arena = declare_dependency(
+  compile_args: c_args,
+  include_directories: ['./include']
+)
+
 arena_test = executable(
   'arena_test',
   'arena_test.c',
-  dependencies : dependencies,
+  dependencies : dependencies + bo_arena,
   c_args: c_args + test_args,
   install : true,
 )

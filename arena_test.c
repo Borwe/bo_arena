@@ -5,7 +5,7 @@
 #include <errno.h>
 #include "utils.h"
 
-#include "arena.h"
+#include <bo_arena.h>
 
 #define runTest(test) {\
     printf("Running Test: %s\n",#test);\
