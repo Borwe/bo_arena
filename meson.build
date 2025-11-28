@@ -31,4 +31,4 @@ arena_test = executable(
   install : true,
 )
 
-test('arena_test', arena_test)
+test('arena_test', arena_test, verbose: true)
