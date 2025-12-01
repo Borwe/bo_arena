@@ -35,7 +35,16 @@ bo_arena_free(&arena,item);
 - You pass in the pointer of item that you allocated on the arena,
 - This only does something if you marked your arena as cleanable.
 
+More examples are in the [testfile](./arena_test.c)
+
 
 ## Contributions
 Contributions are open to this project.
 
+## Testing
+Project uses meson so you can just run
+```sh
+meson test -C build
+```
+
+and it will compile and run the tests
