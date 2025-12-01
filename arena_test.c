@@ -80,7 +80,7 @@ void testFreeing(void){
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
-        100, true, cleanUpMmapArena);
+        105, true, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
     bo_allocate_items(msg, false, &arena, char, 81);
@@ -92,6 +92,42 @@ void testFreeing(void){
     snprintf(error_msg, 5*1024,"Expected ptr == memory but got %p == %p", arena.ptr, arena.memory);
     assert(arena.ptr == arena.memory, error_msg);
     bo_allocate_items(msg, true, &arena, char, 81);
+
+    assert(arena.head != NULL, "Expected to have something");
+    arena.cleanup(&arena);
+    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+}
+
+
+void testMultipleInsertionsAfterFree(void){
+    bo_arena arena  = bo_make_arena(
+        mmap(NULL, 100,
+             PROT_WRITE | PROT_WRITE,
+             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        200, true, cleanUpMmapArena);
+    char *msg;
+    bo_allocate_items(msg, true, &arena, char, 20);
+    bo_allocate_items(msg, false, &arena, char, 133);
+    assert(msg==NULL, "Expected to fail allocation");
+    bo_arena_free(&arena,msg);
+    assert(arena.head == NULL, "Expected to have nothing");
+
+    char error_msg[5*1024];
+    snprintf(error_msg, 5*1024,"Expected ptr == memory but got %p == %p", arena.ptr, arena.memory);
+    assert(arena.ptr == arena.memory, error_msg);
+    bo_allocate_items(msg, true, &arena, char, 81);
+    bo_allocate_items(msg, true, &arena, char, 4);
+    bo_allocate_items(msg, true, &arena, char, 2);
+    assert(arena.head != NULL, "Expected to have something");
+
+    bo_arena_alocation *aloc = arena.head;
+    uint64_t counter = 1;
+    while(aloc->next !=NULL) {
+        aloc = aloc->next;
+        ++counter;
+    }
+    snprintf(error_msg, 5*1024,"Expected counter == 2 but got %lu", counter);
+    assert(counter ==  3, error_msg);
     arena.cleanup(&arena);
     assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
@@ -102,5 +138,6 @@ int main(void){
     runTest(testOverUsing);
     runTest(testOverUsingLater);
     runTest(testFreeing);
+    runTest(testMultipleInsertionsAfterFree);
     return 0;
 }

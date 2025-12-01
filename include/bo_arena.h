@@ -63,7 +63,6 @@ bo_arena_alocation *_bo_make_allocation(bo_arena *const arena){
     if(allocation==NULL){
         return NULL;
     }else if(arena->head == NULL){
-        fprintf(stderr,"HEAD ALLOC %p\n", (void *)allocation);
         arena->head = allocation;
         return arena->head;
     }else{
@@ -71,7 +70,6 @@ bo_arena_alocation *_bo_make_allocation(bo_arena *const arena){
         bo_arena_alocation *aloc = arena->head;
         while(aloc->next != NULL) aloc = aloc->next;
         aloc->next = allocation;
-        fprintf(stderr,"NEW ALLOC %p\n", (void *)allocation);
         return aloc->next;
     }
 }
@@ -98,7 +96,9 @@ void *_bo_update_allocation(
             (*aloc)->back = NULL;
         }else{
             bo_arena_alocation *alptr = arena->head;
-            while(alptr->next != NULL) alptr = alptr->next;
+            while(alptr->next != NULL) { 
+                alptr = alptr->next;
+            }
             alptr->next = *aloc;
             (*aloc)->back = alptr;
         }
@@ -120,6 +120,10 @@ void *_bo_try_get_free_space(
 
     bo_arena_alocation *result = NULL;
 
+    if(arena->head == NULL){
+        return NULL;
+    }
+
     bo_arena_alocation *aloc = arena->head;
     //head must never be null
     while(aloc->next!=NULL) aloc = aloc->next;
@@ -130,7 +134,6 @@ void *_bo_try_get_free_space(
     //if aligned
     if((ptr_loc & (chosen_alignment-1)) == 0
         && ptr_end < arena_end){
-        fprintf(stderr,"SASA %p\n", (void *)ptr_loc);
         result = (void*)ptr_loc;
         result->size = total_size;
     }else{
@@ -172,7 +175,7 @@ void *_bo_allocate(
     const uintptr_t memory_end = ((uintptr_t)area->memory) + area->size;
 
     uintptr_t ptr = (uintptr_t)area->ptr;
-    const uintptr_t ptr_end = ptr+total_size;
+    uintptr_t ptr_end = ptr+total_size;
     if((ptr & (chosen_alignment-1)) == 0 && ptr_end < memory_end){
         area->ptr = (void *)ptr_end;
         return _bo_update_allocation(area, &aloc, (void*)ptr, total_size);
@@ -180,19 +183,23 @@ void *_bo_allocate(
 
     //get next aligned position
     ptr = (ptr+chosen_alignment-1) & ~(chosen_alignment -1);
-    area->ptr = (void*)(ptr+(size*count));
-    if((uintptr_t)area->ptr > memory_end){
+    ptr_end = ptr+total_size;
+    area->ptr = (void*)ptr_end;
+    if( ptr_end > memory_end){
         if(area->freeing){
             return _bo_try_get_free_space(area, alignment,size,count);
         }else{
             return NULL;
         }
     }
-    return _bo_update_allocation(area, &aloc, (void *)ptr, count*size);
+    return _bo_update_allocation(area, &aloc, (void *)ptr, total_size);
 }
 
 void bo_arena_free(bo_arena *const arena, void *const item){
     if(!arena->freeing){
+        return;
+    }
+    if(arena->head == NULL){
         return;
     }
     static const uint64_t bo_arena_alocation_size = sizeof(bo_arena_alocation);
@@ -200,7 +207,6 @@ void bo_arena_free(bo_arena *const arena, void *const item){
     while(aloc->next !=NULL && (uintptr_t)aloc != (uintptr_t)item - bo_arena_alocation_size){
         aloc = aloc->next;
     }
-    fprintf(stderr,"FOUND aloc at %p\n",(void*)aloc);
     bo_arena_alocation *prev = aloc->back;
     if(prev != NULL){
         //if tree not empty there must always be a prev
