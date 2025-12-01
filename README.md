@@ -3,6 +3,8 @@
 
 ## Usage:
 
+This is a two header file library, all files contained in [include](/include) directory, you can also use [meson wrapping](https://mesonbuild.com/Wrap-dependency-system-manual.html) to use the library.
+
 To create an arena you call the function:
 
 ```c
@@ -36,3 +38,4 @@ bo_arena_free(&arena,item);
 
 ## Contributions
 Contributions are open to this project.
+
