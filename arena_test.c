@@ -8,7 +8,7 @@
 #include <bo_arena.h>
 
 #define runTest(test) {\
-    printf("Running Test: %s\n",#test);\
+    fprintf(stderr,"Running Test: %s\n",#test);\
     test();\
 }
 
@@ -80,13 +80,18 @@ void testFreeing(void){
         mmap(NULL, 100,
              PROT_WRITE | PROT_WRITE,
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
-        100, false, cleanUpMmapArena);
+        100, true, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
     bo_allocate_items(msg, false, &arena, char, 81);
     assert(msg==NULL, "Expected to fail allocation");
     bo_arena_free(&arena,msg);
-    //bo_allocate_items(msg, true, &arena, char, 81);
+    assert(arena.head == NULL, "Expected to have nothing");
+
+    char error_msg[5*1024];
+    snprintf(error_msg, 5*1024,"Expected ptr == memory but got %p == %p", arena.ptr, arena.memory);
+    assert(arena.ptr == arena.memory, error_msg);
+    bo_allocate_items(msg, true, &arena, char, 81);
     arena.cleanup(&arena);
     assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
