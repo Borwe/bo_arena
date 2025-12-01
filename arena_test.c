@@ -3,9 +3,9 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <errno.h>
-#include "utils.h"
 
 #include <bo_arena.h>
+#include <bo_utils.h>
 
 #define runTest(test) {\
     fprintf(stderr,"Running Test: %s\n",#test);\
@@ -16,7 +16,7 @@ void cleanUpMmapArena(bo_arena *arena){
     const int r = munmap(arena->memory, arena->size);
     if(r==-1){
         const char * msg = strerror(errno);
-        panic(msg);
+        bo_arena_panic(msg);
     }
     arena->memory = NULL;
 }
@@ -28,7 +28,7 @@ void testClearing(void){
              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
         100, false, cleanUpMmapArena);
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 void testUsing(void){
@@ -40,10 +40,10 @@ void testUsing(void){
     char *msg;
     bo_allocate_items(msg,true, &arena, char, 6);
     strcpy(msg, "Brian");
-    assert(msg[1]=='r', "Unexpected");
-    assert(msg[4]=='n', "Unexpected");
+    bo_arena_assert(msg[1]=='r', "Unexpected");
+    bo_arena_assert(msg[4]=='n', "Unexpected");
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 void testOverUsing(void){
@@ -54,9 +54,9 @@ void testOverUsing(void){
         100, false, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, false, &arena, char, 200);
-    assert(msg==NULL, "Expected to fail allocation");
+    bo_arena_assert(msg==NULL, "Expected to fail allocation");
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 
@@ -69,9 +69,9 @@ void testOverUsingLater(void){
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
     bo_allocate_items(msg, false, &arena, char, 81);
-    assert(msg==NULL, "Expected to fail allocation");
+    bo_arena_assert(msg==NULL, "Expected to fail allocation");
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 
@@ -84,18 +84,18 @@ void testFreeing(void){
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
     bo_allocate_items(msg, false, &arena, char, 81);
-    assert(msg==NULL, "Expected to fail allocation");
+    bo_arena_assert(msg==NULL, "Expected to fail allocation");
     bo_arena_free(&arena,msg);
-    assert(arena.head == NULL, "Expected to have nothing");
+    bo_arena_assert(arena.head == NULL, "Expected to have nothing");
 
     char error_msg[5*1024];
     snprintf(error_msg, 5*1024,"Expected ptr == memory but got %p == %p", arena.ptr, arena.memory);
-    assert(arena.ptr == arena.memory, error_msg);
+    bo_arena_assert(arena.ptr == arena.memory, error_msg);
     bo_allocate_items(msg, true, &arena, char, 81);
 
-    assert(arena.head != NULL, "Expected to have something");
+    bo_arena_assert(arena.head != NULL, "Expected to have something");
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 
@@ -108,17 +108,17 @@ void testMultipleInsertionsAfterFree(void){
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
     bo_allocate_items(msg, false, &arena, char, 133);
-    assert(msg==NULL, "Expected to fail allocation");
+    bo_arena_assert(msg==NULL, "Expected to fail allocation");
     bo_arena_free(&arena,msg);
-    assert(arena.head == NULL, "Expected to have nothing");
+    bo_arena_assert(arena.head == NULL, "Expected to have nothing");
 
     char error_msg[5*1024];
     snprintf(error_msg, 5*1024,"Expected ptr == memory but got %p == %p", arena.ptr, arena.memory);
-    assert(arena.ptr == arena.memory, error_msg);
+    bo_arena_assert(arena.ptr == arena.memory, error_msg);
     bo_allocate_items(msg, true, &arena, char, 81);
     bo_allocate_items(msg, true, &arena, char, 4);
     bo_allocate_items(msg, true, &arena, char, 2);
-    assert(arena.head != NULL, "Expected to have something");
+    bo_arena_assert(arena.head != NULL, "Expected to have something");
 
     bo_arena_alocation *aloc = arena.head;
     uint64_t counter = 1;
@@ -127,9 +127,9 @@ void testMultipleInsertionsAfterFree(void){
         ++counter;
     }
     snprintf(error_msg, 5*1024,"Expected counter == 2 but got %lu", counter);
-    assert(counter ==  3, error_msg);
+    bo_arena_assert(counter ==  3, error_msg);
     arena.cleanup(&arena);
-    assert(arena.memory == NULL, "Expected memory to be null after clearing");
+    bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
 }
 
 int main(void){

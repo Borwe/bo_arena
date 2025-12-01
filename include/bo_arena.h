@@ -1,7 +1,7 @@
-#ifndef DEHASH_ARENA
-#define DEHASH_ARENA
+#ifndef BO_ARENA
+#define BO_ARENA
 
-#include "utils.h"
+#include "bo_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -39,7 +39,7 @@ bo_arena bo_make_arena(
     bool isFreeingKind, bo_arena_cleanup_func cleanupFunc){
 
     if(memory==NULL){
-        panic("Passed in memory that is null");
+        bo_arena_panic("Passed in memory that is null");
     }
     return (bo_arena){
         .head = NULL,
@@ -222,7 +222,7 @@ void bo_arena_free(bo_arena *const arena, void *const item){
     const size_t alignment = alignof(typ); \
     typ *ptr_n = _bo_allocate((arena), alignment, sizeof(typ), (count));\
     if((panicc) && ptr_n==NULL){\
-        panic("Failed to allocate using Arena, ran out of space.");\
+        bo_arena_panic("Failed to allocate using Arena, ran out of space.");\
     }\
     (ptr) = ptr_n;\
 }
