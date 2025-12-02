@@ -3,7 +3,14 @@
 
 ## Usage:
 
-This is a two header file library, all files contained in [include](/include) directory, you can also use [meson wrapping](https://mesonbuild.com/Wrap-dependency-system-manual.html) to use the library.
+This is a two header file library, all files contained in [include](/include) directory, you can also use [meson wrapping](https://mesonbuild.com/Wrap-dependency-system-manual.html) to use the library, example, a file in `submodules/bo_arena.wrap` with the contents:
+
+```meson
+[wrap-git]
+url = https://github.com/Borwe/bo_arena.git
+revision = HEAD
+depth = 1
+```
 
 To create an arena you call the function:
 
