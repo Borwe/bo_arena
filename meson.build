@@ -20,6 +20,8 @@ bo_arena = declare_dependency(
   include_directories: ['./include']
 )
 
+meson.override_dependency('bo_arena', bo_arena)
+
 arena_test = executable(
   'arena_test',
   'arena_test.c',
