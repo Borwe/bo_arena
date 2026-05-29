@@ -94,7 +94,7 @@ void bo_arena_free(bo_arena *const arena, void *const item){
 }
 
 /** To enable the functions of bo_arena file */
-#define BO_ARENA_IMPLENTATION 
+//#define BO_ARENA_IMPLENTATION 
 #ifdef BO_ARENA_IMPLENTATION
 
 static void *bo_arena__try_get_free_space(
