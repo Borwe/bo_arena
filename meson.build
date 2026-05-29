@@ -10,10 +10,7 @@ project(
 
 cc = meson.get_compiler('c')
 ubsan = cc.find_library('ubsan', required: false)
-
-test_options = ['b_sanitize=undefined']
-
-dependencies = [ ubsan ]
+asan = cc.find_library('absan', required: false)
 
 bo_arena = declare_dependency(
   include_directories: ['./include']
@@ -21,12 +18,15 @@ bo_arena = declare_dependency(
 
 meson.override_dependency('bo_arena', bo_arena)
 
-arena_test = executable(
-  'arena_test',
-  'arena_test.c',
-  override_options: test_options,
-  dependencies : dependencies + bo_arena,
-  install : true,
-)
+foreach k, v : {'ubsan': [ubsan, ['b_sanitize=undefined']],
+  'asan': [asan, ['b_sanitize=address']]} 
+  arena_test = executable(
+    'arena_test_'+k,
+    'arena_test.c',
+    override_options: v[1],
+    dependencies : [v[0],  bo_arena],
+  )
 
-test('arena_test', arena_test, verbose: true)
+  test('arena_test_'+k, arena_test, verbose: true)
+endforeach
+
