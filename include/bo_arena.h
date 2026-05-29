@@ -40,7 +40,7 @@ struct bo_arena {
  * else set it to false for noncleaning bo_arena
 */
 BO_ARENA_STATIC_ bo_arena bo_make_arena(
-    void *memory, uint64_t size,
+    void *const memory, uint64_t size,
     bool isFreeingKind, bo_arena_cleanup_func cleanupFunc);
 
 static void *bo_arena__allocate(
@@ -49,43 +49,57 @@ static void *bo_arena__allocate(
 
 static bo_arena_alocation *bo_arena__make_allocation(bo_arena *const arena);
 
-void *_bo_update_allocation(
+static void *bo_arena__update_allocation(
     bo_arena *restrict const arena,
     bo_arena_alocation **restrict aloc,
     void *restrict const location,
-    uint64_t total_size){
+    uint64_t total_size);
 
-    //since this function get's called even when aloc hasn't been created
-    //always check and refuse to do use it
-    if(arena->freeing){
-        static const uint64_t bo_arena_alocation_size = sizeof(bo_arena_alocation);
-        *aloc = location;
-        (*aloc)->size = total_size;
-        //set linkedlist pointers to null
-        (*aloc)->next = NULL;
-        (*aloc)->back = NULL;
+static void *bo_arena__try_get_free_space(
+    bo_arena *const arena,
+    uint64_t alignment,
+    uint64_t size, uint64_t count);
 
-        //add it to head linkedlist
-        if(arena->head == NULL) {
-            arena->head = *aloc;
-            (*aloc)->back = NULL;
-        }else{
-            bo_arena_alocation *alptr = arena->head;
-            while(alptr->next != NULL) { 
-                alptr = alptr->next;
-            }
-            alptr->next = *aloc;
-            (*aloc)->back = alptr;
-        }
 
-        return (void*)((uintptr_t)location + bo_arena_alocation_size);
+void bo_arena_free(bo_arena *const arena, void *const item){
+    if(!arena->freeing){
+        return;
+    }
+    if(arena->head == NULL){
+        return;
+    }
+    static const uint64_t bo_arena_alocation_size = sizeof(bo_arena_alocation);
+    bo_arena_alocation *aloc = arena->head;
+    while(aloc->next !=NULL && (uintptr_t)aloc != (uintptr_t)item - bo_arena_alocation_size){
+        aloc = aloc->next;
+    }
+    bo_arena_alocation *prev = aloc->back;
+    if(prev != NULL){
+        //if tree not empty there must always be a prev
+        prev->next = aloc->next;
     }else{
-        return location;
+        //reset memory since nothing in it
+        arena->ptr = arena->memory;
+        arena->head = NULL;
     }
 }
 
-void *_bo_try_get_free_space(
-    bo_arena *const arena, uint64_t alignment,
+#define bo_allocate_items(ptr, panicc, arena, typ, count) {\
+    const size_t alignment = alignof(typ); \
+    typ *ptr_n = bo_arena__allocate((arena), alignment, sizeof(typ), (count));\
+    if((panicc) && ptr_n==NULL){\
+        bo_arena_panic("Failed to allocate using Arena, ran out of space.");\
+    }\
+    (ptr) = ptr_n;\
+}
+
+/** To enable the functions of bo_arena file */
+#define BO_ARENA_IMPLENTATION 
+#ifdef BO_ARENA_IMPLENTATION
+
+static void *bo_arena__try_get_free_space(
+    bo_arena *const arena,
+    uint64_t alignment,
     uint64_t size, uint64_t count){
 
     static const uint64_t bo_arena_alocation_alignment = alignof(bo_arena_alocation);
@@ -131,40 +145,40 @@ void *_bo_try_get_free_space(
     }
 }
 
+static void *bo_arena__update_allocation(
+    bo_arena *restrict const arena,
+    bo_arena_alocation **restrict aloc,
+    void *restrict const location,
+    uint64_t total_size){
 
-void bo_arena_free(bo_arena *const arena, void *const item){
-    if(!arena->freeing){
-        return;
-    }
-    if(arena->head == NULL){
-        return;
-    }
-    static const uint64_t bo_arena_alocation_size = sizeof(bo_arena_alocation);
-    bo_arena_alocation *aloc = arena->head;
-    while(aloc->next !=NULL && (uintptr_t)aloc != (uintptr_t)item - bo_arena_alocation_size){
-        aloc = aloc->next;
-    }
-    bo_arena_alocation *prev = aloc->back;
-    if(prev != NULL){
-        //if tree not empty there must always be a prev
-        prev->next = aloc->next;
+    //since this function get's called even when aloc hasn't been created
+    //always check and refuse to do use it
+    if(arena->freeing){
+        static const uint64_t bo_arena_alocation_size = sizeof(bo_arena_alocation);
+        *aloc = location;
+        (*aloc)->size = total_size;
+        //set linkedlist pointers to null
+        (*aloc)->next = NULL;
+        (*aloc)->back = NULL;
+
+        //add it to head linkedlist
+        if(arena->head == NULL) {
+            arena->head = *aloc;
+            (*aloc)->back = NULL;
+        }else{
+            bo_arena_alocation *alptr = arena->head;
+            while(alptr->next != NULL) { 
+                alptr = alptr->next;
+            }
+            alptr->next = *aloc;
+            (*aloc)->back = alptr;
+        }
+
+        return (void*)((uintptr_t)location + bo_arena_alocation_size);
     }else{
-        //reset memory since nothing in it
-        arena->ptr = arena->memory;
-        arena->head = NULL;
+        return location;
     }
 }
-
-#define bo_allocate_items(ptr, panicc, arena, typ, count) {\
-    const size_t alignment = alignof(typ); \
-    typ *ptr_n = bo_arena__allocate((arena), alignment, sizeof(typ), (count));\
-    if((panicc) && ptr_n==NULL){\
-        bo_arena_panic("Failed to allocate using Arena, ran out of space.");\
-    }\
-    (ptr) = ptr_n;\
-}
-
-#ifdef BO_ARENA_IMPLENTATION
 
 static void *bo_arena__allocate(
     bo_arena *const arena,
@@ -188,7 +202,7 @@ static void *bo_arena__allocate(
     uintptr_t ptr_end = ptr+total_size;
     if((ptr & (chosen_alignment-1)) == 0 && ptr_end < memory_end){
         arena->ptr = (void *)ptr_end;
-        return _bo_update_allocation(arena, &aloc, (void*)ptr, total_size);
+        return bo_arena__update_allocation(arena, &aloc, (void*)ptr, total_size);
     }
 
     //get next aligned position
@@ -197,12 +211,12 @@ static void *bo_arena__allocate(
     arena->ptr = (void*)ptr_end;
     if( ptr_end > memory_end){
         if(arena->freeing){
-            return _bo_try_get_free_space(arena, alignment,size,count);
+            return bo_arena__try_get_free_space(arena, alignment,size,count);
         }else{
             return NULL;
         }
     }
-    return _bo_update_allocation(arena, &aloc, (void *)ptr, total_size);
+    return bo_arena__update_allocation(arena, &aloc, (void *)ptr, total_size);
 }
 
 static bo_arena_alocation *bo_arena__make_allocation(bo_arena *const arena){
@@ -225,7 +239,7 @@ static bo_arena_alocation *bo_arena__make_allocation(bo_arena *const arena){
 }
 
 BO_ARENA_STATIC_ bo_arena bo_make_arena(
-    void *memory, uint64_t size,
+    void *const memory, uint64_t size,
     bool isFreeingKind, bo_arena_cleanup_func cleanupFunc){
 
     if(memory==NULL){
