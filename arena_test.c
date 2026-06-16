@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#define BO_ARENA_IMPLENTATION
+#define BO_ARENA_IMPLEMENTATION
 
 #include <bo_arena.h>
 #include <bo_utils.h>
