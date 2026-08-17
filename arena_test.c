@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <stdlib.h>
 #include <errno.h>
 
@@ -15,19 +14,13 @@
 }
 
 void cleanUpMmapArena(bo_arena *arena){
-    const int r = munmap(arena->memory, arena->size);
-    if(r==-1){
-        const char * msg = strerror(errno);
-        bo_arena_panic(msg);
-    }
+    free(arena->memory);
     arena->memory = NULL;
 }
 
 void testClearing(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(100),
         100, false, cleanUpMmapArena);
     arena.cleanup(&arena);
     bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");
@@ -35,13 +28,11 @@ void testClearing(void){
 
 void testUsing(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(100),
         100, false, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg,true, &arena, char, 6);
-    strcpy(msg, "Brian");
+    snprintf(msg, 6, "%s","Brian");
     bo_arena_assert(msg[1]=='r', "Unexpected");
     bo_arena_assert(msg[4]=='n', "Unexpected");
     arena.cleanup(&arena);
@@ -50,9 +41,7 @@ void testUsing(void){
 
 void testOverUsing(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(100),
         100, false, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, false, &arena, char, 200);
@@ -64,9 +53,7 @@ void testOverUsing(void){
 
 void testOverUsingLater(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(100),
         100, false, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
@@ -79,9 +66,7 @@ void testOverUsingLater(void){
 
 void testFreeing(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(100),
         105, true, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
@@ -103,9 +88,7 @@ void testFreeing(void){
 
 void testMultipleInsertionsAfterFree(void){
     bo_arena arena  = bo_make_arena(
-        mmap(NULL, 100,
-             PROT_WRITE | PROT_WRITE,
-             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0),
+        malloc(200),
         200, true, cleanUpMmapArena);
     char *msg;
     bo_allocate_items(msg, true, &arena, char, 20);
@@ -128,7 +111,7 @@ void testMultipleInsertionsAfterFree(void){
         aloc = aloc->next;
         ++counter;
     }
-    snprintf(error_msg, 5*1024,"Expected counter == 2 but got %lu", counter);
+    snprintf(error_msg, 5*1024,"Expected counter == 2 but got %llu", counter);
     bo_arena_assert(counter ==  3, error_msg);
     arena.cleanup(&arena);
     bo_arena_assert(arena.memory == NULL, "Expected memory to be null after clearing");

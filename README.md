@@ -10,6 +10,9 @@ This is a two header file library, all files contained in [include](/include) di
 url = https://github.com/Borwe/bo_arena.git
 revision = HEAD
 depth = 1
+
+[provide]
+bo_arena=bo_arena_dep
 ```
 
 To create an arena you call the function:
