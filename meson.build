@@ -32,7 +32,7 @@ if get_option('build_tests') == true
       'arena_test_'+k,
       'arena_test.c',
       override_options: v[1],
-      dependencies : [v[0],  bo_arena],
+      dependencies : [v[0],  bo_arena_dep],
     )
 
     test('arena_test_'+k, arena_test, verbose: true)
